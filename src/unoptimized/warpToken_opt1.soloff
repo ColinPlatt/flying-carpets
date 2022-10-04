@@ -1,0 +1,202 @@
+// SPDX-License-Identifier: The Unlicense
+pragma solidity 0.8.15;
+
+import {CREATE2_warp} from "../CREATE2_warp.sol";
+
+interface IWarpHelper {
+    function image() external view returns (bytes memory);
+    function name_Sym(uint64 val) external pure returns (string memory, string memory);
+
+
+}
+
+interface IWarpChild {
+    function mint(address to, uint256 amount) external;
+}
+
+
+
+/// modified from transmissions11/solmate
+contract warpToken {
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
+
+    event Warp(address newLocation, uint256 timestamp, uint16 iteration, uint256 ETHAmount);
+
+    /*//////////////////////////////////////////////////////////////
+                            WARP STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    struct WARP_INFO{
+        address warpParent; //auto
+        uint16 warpIteration;
+        IWarpHelper warpHelper; //auto
+        uint24 minWarp;
+        uint24 maxInactivity;
+        uint64 warpTimestamp; //auto
+    }
+
+    WARP_INFO public info;
+
+    /*//////////////////////////////////////////////////////////////
+                            METADATA STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    string public name;
+
+    string public symbol;
+
+    uint8 public immutable decimals = 18;
+
+    /*//////////////////////////////////////////////////////////////
+                              ERC20 STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 public totalSupply;
+
+    mapping(address => uint256[2]) public balanceAndReceived;
+
+    function balanceOf(address owner) public view returns (uint256) {
+        return balanceAndReceived[owner][0];
+    }
+
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    /*//////////////////////////////////////////////////////////////
+                               CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    constructor(
+        uint16  _warpIteration,
+        uint24  _minWarp,
+        uint24  _maxInactivity,
+        address _warpHelper 
+    ) payable {
+        info    = WARP_INFO(
+            msg.sender,
+            _warpIteration,
+            IWarpHelper(_warpHelper),
+            _minWarp,
+            _maxInactivity,
+            uint64(block.timestamp)
+        );
+        (name, symbol) = info.warpHelper.name_Sym(_warpIteration);
+
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               ERC20 LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function approve(address spender, uint256 amount) public returns (bool) {
+        allowance[msg.sender][spender] = amount;
+
+        emit Approval(msg.sender, spender, amount);
+
+        return true;
+    }
+
+    function _transfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal {
+        if(_from != address(0)) {
+            balanceAndReceived[_from][0] -= _amount;
+        }
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked {
+            balanceAndReceived[_to][0] += _amount;
+            balanceAndReceived[_to][1] = block.timestamp;
+        }
+
+        emit Transfer(_from, _to, _amount);
+    }
+
+    function transfer(address to, uint256 amount) public returns (bool) {
+        _transfer(msg.sender, to, amount);
+
+        return true;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public returns (bool) {
+        uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
+
+        if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
+
+        _transfer(from, to, amount);
+
+        return true;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        INTERNAL MINT/BURN LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    // leave this open for testing
+    // @todo fix possibility that someone receives after the warp
+    function claim() public {
+        require(block.timestamp - balanceAndReceived[msg.sender][1] <= info.maxInactivity, "You didn't make it.");
+
+        IWarpChild(
+            CREATE2_warp.computeAddress(
+                address(this),
+                address(this)
+            )
+        ).mint(
+            msg.sender, 
+            balanceOf(msg.sender)
+        );      
+    }
+
+    function _mint(address to, uint256 amount) public {
+        require(msg.sender == info.warpParent || msg.sender == address(info.warpHelper), "You're not my dad.");
+
+        totalSupply += amount;
+
+        _transfer(address(0), to, amount);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            GRASSHOPPER LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function warp() public returns (address newToken) {
+        require(block.timestamp >= info.minWarp, "To early to warp.");
+
+        uint256 gasEntry = gasleft();
+
+        info.warpTimestamp = uint64(block.timestamp);
+        uint256 carriedBalance = address(this).balance;
+
+        // need to updata the constructor commands
+        newToken = CREATE2_warp.deploy(
+            0, 
+            address(this), 
+            abi.encodePacked(
+                info.warpHelper.image(), 
+                abi.encode(
+                    block.timestamp + 3600, 
+                    86400, 
+                    address(info.warpHelper)
+                )
+            )
+        );
+
+        uint256 gasPostDeploy = gasEntry - gasleft();
+
+        emit Warp(newToken, info.warpTimestamp, info.warpIteration, carriedBalance);
+    }
+
+}
