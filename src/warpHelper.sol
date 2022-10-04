@@ -5,8 +5,29 @@ pragma solidity 0.8.15;
 
 import {LibString} from 'solmate/utils/LibString.sol';
 import {IUniswapV2Router01} from 'v2-periphery/interfaces/IUniswapV2Router01.sol';
-import {CREATE2_warp} from "./CREATE2_warp.sol";
 
+import {warpToken} from './warpToken.sol';
+
+library UniswapV2Library {
+    
+    // returns sorted token addresses, used to handle return values from pairs sorted in this order
+    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
+        require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
+        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
+    }
+    
+    function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address pair) {
+        (address token0, address token1) = sortTokens(tokenA, tokenB);
+        pair = address(uint160(uint256(keccak256(abi.encodePacked(
+                hex'ff',
+                factory,
+                keccak256(abi.encodePacked(token0, token1)),
+                hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
+            )))));
+    }
+
+}
 
 interface IERC20 {
     function balanceOf(address owner) external view returns (uint);
@@ -14,23 +35,15 @@ interface IERC20 {
     function transferFrom(address from, address to, uint value) external returns (bool);
 }
 
-interface IWarp {
-    function claim(address to, uint256 amount) external;
-}
-
 contract warpHelper {
 
     bytes               public image;
     IUniswapV2Router01  public router;
 
-    address             public currentLPToken;
-    IERC20              public constant weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-
     constructor(
-        bytes memory    _image, 
         address         _router
     ) {
-        image         = _image;
+        image         = type(warpToken).creationCode;
         router        = IUniswapV2Router01(_router);
     }
 
@@ -49,36 +62,56 @@ contract warpHelper {
         );
     }
 
-    function rugAndReplace(address currentWarp, address newWarp, uint256 _gasPostDeployment, address _warper) public {
+    function rugAndReplace(address currentWarp, address newWarp, uint256 _gasStart) public {
         //check that this comes from the current version of warp
         require(msg.sender == currentWarp, "PRETTY FUNNY");
 
-        uint256 gasPreRug = gasleft();
-
         //fetch the current lp token
+        address currentLPToken = UniswapV2Library.pairFor(router.factory(), router.WETH(), currentWarp);
 
-        // approve the LP to be sent to the router upon removal
-        IERC20(currentLPToken).approve(
-            address(router), 
-            IERC20(currentLPToken).balanceOf(address(this))
-        );
+        uint amountEthCurrent;
 
-        //remove all liquidity
-        (uint amountToken,) = router.removeLiquidityETH(
-            currentWarp,
-            IERC20(currentLPToken).balanceOf(currentLPToken),
-            IERC20(currentLPToken).balanceOf(currentLPToken),
-            weth.balanceOf(currentLPToken),
+        //check if this follows warp1...N logic
+        if(IERC20(currentLPToken).balanceOf(address(this)) > 0){
+            // approve the LP to be sent to the router upon removal
+            IERC20(currentLPToken).approve(
+                address(router), 
+                IERC20(currentLPToken).balanceOf(address(this))
+            );
+
+            //remove all liquidity
+            (, amountEthCurrent) = router.removeLiquidityETH(
+                currentWarp,
+                IERC20(currentLPToken).balanceOf(currentLPToken),
+                IERC20(currentLPToken).balanceOf(currentLPToken),
+                IERC20(router.WETH()).balanceOf(currentLPToken),
+                address(this),
+                block.timestamp
+            );
+        } else {
+            amountEthCurrent = address(this).balance;
+        }
+
+        //mint a number of newWarp equal to what was removed from the LP
+        warpToken(newWarp).claim();
+        uint newWarpBalance = IERC20(newWarp).balanceOf(address(this));
+
+        //figure out how much ETH to leave
+        uint gasToSave = (_gasStart - gasleft() + 450_000) * block.basefee;
+        if(gasToSave >= amountEthCurrent) gasToSave = 0;
+
+        // add new liquidity, approve should be automatic now
+        router.addLiquidityETH(
+            newWarp,
+            newWarpBalance,
+            newWarpBalance,
+            (amountEthCurrent - gasToSave),
             address(this),
             block.timestamp
         );
 
-        //mint a number of newWarp equal to what was removed from the LP
-        IWarp(newWarp).claim(address(this), amountToken);
-
-        // approve newWarp and add new liquidity
-
         // refund warper
+        payable(tx.origin).transfer(address(this).balance);
 
     }
 

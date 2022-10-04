@@ -2,7 +2,7 @@
 pragma solidity ^0.8.15;
 
 import "forge-std/Test.sol";
-import {warpToken} from "../src/warpToken_opt2.sol";
+import {warpToken} from "../src/warpToken.sol";
 import {warpHelper} from "../src/warpHelper.sol";
 
 contract warpTokenTest is Test {
@@ -17,7 +17,7 @@ contract warpTokenTest is Test {
        
        createCode = type(warpToken).creationCode;
 
-       helper = new warpHelper(createCode, address(0));
+       helper = new warpHelper(address(0));
        warp = new warpToken{value: 1 ether}(0,address(helper));
 
     }

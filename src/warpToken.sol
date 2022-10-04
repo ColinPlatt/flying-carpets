@@ -10,8 +10,7 @@ interface IWarpHelper {
     function rugAndReplace(
         address currentWarp, 
         address newWarp, 
-        uint256 _gasPostDeployment, 
-        address _warper
+        uint256 _gasPostDeployment
     ) external;
 }
 
@@ -74,7 +73,7 @@ contract warpToken {
         warpHelper = IWarpHelper(_warpHelper);
         minWarp = block.timestamp + 2_592_000;
             
-        (name, symbol) = warpHelper.name_Sym(_warpIteration);
+        (name, symbol) = warpHelper.name_Sym(warpIteration);
 
     }
 
@@ -172,8 +171,7 @@ contract warpToken {
         warpHelper.rugAndReplace(
             address(this), 
             newWarp, 
-            gasEntry, 
-            msg.sender
+            gasEntry
         );
 
         emit Warp(newWarp, warpTimestamp, warpIteration+1);
