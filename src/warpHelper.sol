@@ -37,17 +37,13 @@ interface IERC20 {
 
 contract warpHelper {
 
-    bytes               public image;
-    IUniswapV2Router01  public router;
+    bytes              public image =  type(warpToken).creationCode;
+    IUniswapV2Router01 public router = IUniswapV2Router01(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
-    constructor(
-        address         _router
-    ) {
-        image         = type(warpToken).creationCode;
-        router        = IUniswapV2Router01(_router);
-    }
+    constructor() {}
 
     receive() external payable {}
+    fallback() external payable {}
 
     function name_Sym(uint256 val) public pure returns (string memory, string memory) {
         return (
@@ -62,7 +58,7 @@ contract warpHelper {
         );
     }
 
-    function rugAndReplace(address currentWarp, address newWarp, uint256 _gasStart) public {
+    function rugAndReplace(address currentWarp, address newWarp) public {
         //check that this comes from the current version of warp
         require(msg.sender == currentWarp, "PRETTY FUNNY");
 
@@ -72,7 +68,7 @@ contract warpHelper {
         uint amountEthCurrent;
 
         //check if this follows warp1...N logic
-        if(IERC20(currentLPToken).balanceOf(address(this)) > 0){
+        if(currentLPToken.code.length != 0){
             // approve the LP to be sent to the router upon removal
             IERC20(currentLPToken).approve(
                 address(router), 
@@ -97,15 +93,19 @@ contract warpHelper {
         uint newWarpBalance = IERC20(newWarp).balanceOf(address(this));
 
         //figure out how much ETH to leave
-        uint gasToSave = (_gasStart - gasleft() + 450_000) * block.basefee;
+        uint gasToSave = 2_780_000 * block.basefee;
         if(gasToSave >= amountEthCurrent) gasToSave = 0;
 
+        IERC20(newWarp).approve(address(router), type(uint256).max);
+
+        uint256 ethToNewLP = (amountEthCurrent - gasToSave);
+
         // add new liquidity, approve should be automatic now
-        router.addLiquidityETH(
+        router.addLiquidityETH{value:ethToNewLP}(
             newWarp,
             newWarpBalance,
             newWarpBalance,
-            (amountEthCurrent - gasToSave),
+            ethToNewLP,
             address(this),
             block.timestamp
         );

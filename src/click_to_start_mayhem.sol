@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import {Create2} from "@Openzeppelin/utils/Create2.sol";
 
+
 /* 
 
 This contract allows 2 contract2 with bytecode matching the hashcheck to be sent to deploy2
@@ -21,7 +22,8 @@ contract click_to_start_mayhem {
     }
 
     
-    //takes a set of bytes and runs it through a Create2 if this contract is lockedAndLoaded and the hash of the input bytes matches the hash loaded in the contstructor
+    
+    //takes a set of bytes and runs it through a Create2 if the hash of the input bytes matches the hashes loaded in the contstructor
     function click_to_start_the_mayhem(bytes[2] calldata what) public returns (address where, address accomplice) {
         require(keccak256(what[0]) == hashCheck0 && keccak256(what[1]) == hashCheck1, "Not that.");
 
@@ -44,7 +46,8 @@ contract click_to_start_mayhem {
                     address(this)
                 )
             ),
-            what[1]
-        );        
+            abi.encodePacked(what[1], abi.encode(where))
+        );
+
     }
 }

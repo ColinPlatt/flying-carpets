@@ -9,8 +9,7 @@ interface IWarpHelper {
     function name_Sym(uint256 val) external pure returns (string memory, string memory);
     function rugAndReplace(
         address currentWarp, 
-        address newWarp, 
-        uint256 _gasPostDeployment
+        address newWarp
     ) external;
 }
 
@@ -71,8 +70,8 @@ contract warpToken {
         warpParent = IWarpParent(msg.sender); //check this comes from the parent
         warpIteration =_warpIteration;
         warpHelper = IWarpHelper(_warpHelper);
-        minWarp = block.timestamp + 2_592_000;
-            
+        minWarp = block.timestamp + 10; //set this to a stupidly low amount @todo fix before deployment
+
         (name, symbol) = warpHelper.name_Sym(warpIteration);
 
     }
@@ -170,8 +169,7 @@ contract warpToken {
 
         warpHelper.rugAndReplace(
             address(this), 
-            newWarp, 
-            gasEntry
+            newWarp
         );
 
         emit Warp(newWarp, warpTimestamp, warpIteration+1);

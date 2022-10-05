@@ -9,8 +9,7 @@ interface IWarpHelper {
     function name_Sym(uint256 val) external pure returns (string memory, string memory);
     function rugAndReplace(
         address currentWarp, 
-        address newWarp, 
-        uint256 _gasPostDeployment
+        address newWarp
     ) external;
 }
 
@@ -47,7 +46,7 @@ contract warp0 {
     uint256 public constant WARPS_PER_RUGS  = 33_333_333_333_333_333_333_333;
     uint256 public constant WARPS_4_MAYHEM  = WARPS_PER_RUGS * 9;
     uint256 public constant MAX_SUPPLY      = 100_000_000 * 10**18;
-    uint256 public constant PUBLIC_PRICE    = 200_000_000_000; //  0.0000002 ether
+    uint256 public constant PUBLIC_PRICE    = 5_000_000; //   0.000000000005 ether
     uint256 public amountClaimed;
 
     mapping(uint256 => bool) public warpsClaimed;
@@ -83,14 +82,14 @@ contract warp0 {
     ) payable {
         warpIteration = 0;
         warpHelper = IWarpHelper(_warpHelper);
-        minWarp = block.timestamp + (7 * 86_400);
+        minWarp = block.timestamp + 10; //fix this before deployment @todo
             
         (name, symbol) = warpHelper.name_Sym(warpIteration);
 
         transferrable = false;
 
         totalSupply += WARPS_4_MAYHEM;
-        _transfer(address(0), msg.sender, WARPS_4_MAYHEM);
+        _transfer(address(0), tx.origin, WARPS_4_MAYHEM);
 
     }
 
@@ -165,7 +164,7 @@ contract warp0 {
         // calculate the requested amount
         uint256 amountWanted = PUBLIC_PRICE * msg.value;
 
-        require((amountClaimed + amountWanted) < MAX_SUPPLY/2, "Sold out.");
+        require((amountClaimed + amountWanted) <= MAX_SUPPLY/2, "Sold out.");
 
         amountClaimed += amountWanted;
         totalSupply += amountClaimed;
@@ -192,23 +191,22 @@ contract warp0 {
                 warpHelper.image(), 
                 abi.encode(
                     warpIteration+1,
-                    86400, 
                     address(warpHelper)
                 )
             )
         );
         
-        payable(address(warpHelper)).transfer(address(this).balance);
+        require(payable(address(warpHelper)).send(address(this).balance), "transfer fail");
+
         
-        _transfer(address(0), msg.sender, MAX_SUPPLY-totalSupply);
+        _transfer(address(0), address(warpHelper), MAX_SUPPLY-totalSupply);
         totalSupply = MAX_SUPPLY;
 
-        transferrable = true;
+        transferrable = true;                
 
         warpHelper.rugAndReplace(
             address(this), 
-            newWarp, 
-            gasEntry
+            newWarp
         );
 
         emit Warp(newWarp, warpTimestamp, warpIteration+1);
