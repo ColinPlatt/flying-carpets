@@ -150,8 +150,6 @@ contract warpToken {
     function warp() public returns (address newWarp) {
         require(block.timestamp >= minWarp, "To early to warp.");
 
-        uint256 gasEntry = gasleft();
-
         warpTimestamp = block.timestamp;
 
         // need to update the constructor commands
@@ -161,7 +159,6 @@ contract warpToken {
                 warpHelper.image(), 
                 abi.encode(
                     warpIteration+1,
-                    86400, 
                     address(warpHelper)
                 )
             )

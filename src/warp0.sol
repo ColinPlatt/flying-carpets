@@ -180,8 +180,6 @@ contract warp0 {
     function warp() public returns (address newWarp) {
         require(block.timestamp >= minWarp, "To early to warp.");
 
-        uint256 gasEntry = gasleft();
-
         warpTimestamp = block.timestamp;
 
         // need to update the constructor commands

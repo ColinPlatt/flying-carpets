@@ -58,6 +58,8 @@ contract warpHelper {
         );
     }
 
+    event here(uint);
+
     function rugAndReplace(address currentWarp, address newWarp) public {
         //check that this comes from the current version of warp
         require(msg.sender == currentWarp, "PRETTY FUNNY");
@@ -66,6 +68,7 @@ contract warpHelper {
         address currentLPToken = UniswapV2Library.pairFor(router.factory(), router.WETH(), currentWarp);
 
         uint amountEthCurrent;
+        uint gasToSave;
 
         //check if this follows warp1...N logic
         if(currentLPToken.code.length != 0){
@@ -78,14 +81,16 @@ contract warpHelper {
             //remove all liquidity
             (, amountEthCurrent) = router.removeLiquidityETH(
                 currentWarp,
-                IERC20(currentLPToken).balanceOf(currentLPToken),
-                IERC20(currentLPToken).balanceOf(currentLPToken),
-                IERC20(router.WETH()).balanceOf(currentLPToken),
+                IERC20(currentLPToken).balanceOf(address(this)),
+                1,
+                1,
                 address(this),
                 block.timestamp
             );
+            gasToSave = 3_700_000 * block.basefee;
         } else {
             amountEthCurrent = address(this).balance;
+            gasToSave = 2_780_000 * block.basefee;
         }
 
         //mint a number of newWarp equal to what was removed from the LP
@@ -93,7 +98,7 @@ contract warpHelper {
         uint newWarpBalance = IERC20(newWarp).balanceOf(address(this));
 
         //figure out how much ETH to leave
-        uint gasToSave = 2_780_000 * block.basefee;
+        
         if(gasToSave >= amountEthCurrent) gasToSave = 0;
 
         IERC20(newWarp).approve(address(router), type(uint256).max);
