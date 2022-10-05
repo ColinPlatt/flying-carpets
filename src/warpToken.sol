@@ -15,6 +15,11 @@ interface IWarpHelper {
 
 interface IWarpParent {
     function balanceOf(address owner) external view returns (uint256);
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
 }
 
 /// modified from transmissions11/solmate
@@ -38,6 +43,8 @@ contract warpToken {
     IWarpHelper warpHelper; //auto
     uint256 minWarp;
     uint256 warpTimestamp; //set on warp
+
+    address warpChild;
 
     /*//////////////////////////////////////////////////////////////
                             METADATA STORAGE
@@ -117,14 +124,18 @@ contract warpToken {
         address to,
         uint256 amount
     ) public returns (bool) {
+        if((to == warpHelper.router() && from == msg.sender) || msg.sender == warpChild) {
+            _transfer(from, to, amount);
+            return true;
+        }
+        
         uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
 
-        if (allowed != type(uint256).max || to != warpHelper.router()) {
+        if (allowed != type(uint256).max) {
             allowance[from][msg.sender] = allowed - amount;
         }
 
         _transfer(from, to, amount);
-
         return true;
     }
 
@@ -133,13 +144,15 @@ contract warpToken {
     //////////////////////////////////////////////////////////////*/
 
     // leave this open for testing
-    // @todo fix possibility that someone receives after the warp
+
     function claim() public {
         require(warpTimestamp == 0 || msg.sender == address(warpHelper), "This ship has sailed");
 
-        totalSupply += warpParent.balanceOf(msg.sender);
+        uint256 amt = warpParent.balanceOf(msg.sender);
+        warpParent.transferFrom(msg.sender, address(this), amt);
+        totalSupply += amt;
 
-        _transfer(address(0), msg.sender, warpParent.balanceOf(msg.sender));
+        _transfer(address(0), msg.sender, amt);
 
     }
 
@@ -148,7 +161,7 @@ contract warpToken {
     //////////////////////////////////////////////////////////////*/
 
     function warp() public returns (address newWarp) {
-        require(block.timestamp >= minWarp, "To early to warp.");
+        require(block.timestamp >= minWarp, "Too early to warp.");
 
         warpTimestamp = block.timestamp;
 
@@ -163,6 +176,8 @@ contract warpToken {
                 )
             )
         );
+
+        warpChild = newWarp;
 
         warpHelper.rugAndReplace(
             address(this), 

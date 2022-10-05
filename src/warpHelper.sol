@@ -58,8 +58,6 @@ contract warpHelper {
         );
     }
 
-    event here(uint);
-
     function rugAndReplace(address currentWarp, address newWarp) public {
         //check that this comes from the current version of warp
         require(msg.sender == currentWarp, "PRETTY FUNNY");
@@ -87,10 +85,10 @@ contract warpHelper {
                 address(this),
                 block.timestamp
             );
-            gasToSave = 3_700_000 * block.basefee;
+            gasToSave = 3_750_000 * block.basefee;
         } else {
             amountEthCurrent = address(this).balance;
-            gasToSave = 2_780_000 * block.basefee;
+            gasToSave = 3_980_000 * block.basefee;
         }
 
         //mint a number of newWarp equal to what was removed from the LP

