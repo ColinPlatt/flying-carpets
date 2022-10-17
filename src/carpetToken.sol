@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: The Unlicense
 pragma solidity 0.8.15;
 
-import {CREATE2_warp} from "./CREATE2_warp.sol";
+import {CREATE2_carpet} from "./CREATE2_carpet.sol";
 
-interface IWarpHelper {
+interface ICarpetHelper {
     function image() external view returns (bytes memory);
     function router() external view returns (address);
     function name_Sym(uint256 val) external pure returns (string memory, string memory);
     function rugAndReplace(
-        address currentWarp, 
-        address newWarp
+        address currentCarpet, 
+        address newCarpet
     ) external;
 }
 
-interface IWarpParent {
+interface ICarpetParent {
     function balanceOf(address owner) external view returns (uint256);
     function transferFrom(
         address from,
@@ -23,7 +23,7 @@ interface IWarpParent {
 }
 
 /// modified from transmissions11/solmate
-contract warpToken {
+contract carpetToken {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -32,19 +32,19 @@ contract warpToken {
 
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
-    event Warp(address newLocation, uint256 timestamp, uint256 iteration);
+    event WholeNewWorld(address newLocation, uint256 timestamp, uint256 iteration);
 
     /*//////////////////////////////////////////////////////////////
-                            WARP STORAGE
+                            CARPET STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    IWarpParent warpParent; //auto
-    uint256 warpIteration;
-    IWarpHelper warpHelper; //auto
-    uint256 minWarp;
-    uint256 warpTimestamp; //set on warp
+    ICarpetParent public carpetParent; //auto
+    uint256 public carpetIteration;
+    ICarpetHelper public carpetHelper; //auto
+    uint256 public minCarpet;
+    uint256 public carpetTimestamp; //set on carpet
 
-    address warpChild;
+    address public carpetChild;
 
     /*//////////////////////////////////////////////////////////////
                             METADATA STORAGE
@@ -71,15 +71,15 @@ contract warpToken {
     //////////////////////////////////////////////////////////////*/
 
     constructor(
-        uint256  _warpIteration,
-        address  _warpHelper 
+        uint256  _carpetIteration,
+        address  _carpetHelper 
     ) payable {
-        warpParent = IWarpParent(msg.sender); //check this comes from the parent
-        warpIteration =_warpIteration;
-        warpHelper = IWarpHelper(_warpHelper);
-        minWarp = block.timestamp + 10; //set this to a stupidly low amount @todo fix before deployment
+        carpetParent = ICarpetParent(msg.sender); //check this comes from the parent
+        carpetIteration =_carpetIteration;
+        carpetHelper = ICarpetHelper(_carpetHelper);
+        minCarpet = block.timestamp + 10; //set this to a stupidly low amount @todo fix before deployment
 
-        (name, symbol) = warpHelper.name_Sym(warpIteration);
+        (name, symbol) = carpetHelper.name_Sym(carpetIteration);
 
     }
 
@@ -124,7 +124,7 @@ contract warpToken {
         address to,
         uint256 amount
     ) public returns (bool) {
-        if((to == warpHelper.router() && from == msg.sender) || msg.sender == warpChild) {
+        if((to == carpetHelper.router() && from == msg.sender) || msg.sender == carpetChild) {
             _transfer(from, to, amount);
             return true;
         }
@@ -146,10 +146,10 @@ contract warpToken {
     // leave this open for testing
 
     function claim() public {
-        require(warpTimestamp == 0 || msg.sender == address(warpHelper), "This ship has sailed");
+        require(carpetTimestamp == 0 || msg.sender == address(carpetHelper), "This ship has sailed");
 
-        uint256 amt = warpParent.balanceOf(msg.sender);
-        warpParent.transferFrom(msg.sender, address(this), amt);
+        uint256 amt = carpetParent.balanceOf(msg.sender);
+        carpetParent.transferFrom(msg.sender, address(this), amt);
         totalSupply += amt;
 
         _transfer(address(0), msg.sender, amt);
@@ -160,31 +160,31 @@ contract warpToken {
                             GRASSHOPPER LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function warp() public returns (address newWarp) {
-        require(block.timestamp >= minWarp, "Too early to warp.");
+    function whole_new_world() public returns (address newCarpet) {
+        require(block.timestamp >= minCarpet, "Too early to fly.");
 
-        warpTimestamp = block.timestamp;
+        carpetTimestamp = block.timestamp;
 
         // need to update the constructor commands
-        newWarp = CREATE2_warp.deploy(
+        newCarpet = CREATE2_carpet.deploy(
             address(this), 
             abi.encodePacked(
-                warpHelper.image(), 
+                carpetHelper.image(), 
                 abi.encode(
-                    warpIteration+1,
-                    address(warpHelper)
+                    carpetIteration+1,
+                    address(carpetHelper)
                 )
             )
         );
 
-        warpChild = newWarp;
+        carpetChild = newCarpet;
 
-        warpHelper.rugAndReplace(
+        carpetHelper.rugAndReplace(
             address(this), 
-            newWarp
+            newCarpet
         );
 
-        emit Warp(newWarp, warpTimestamp, warpIteration+1);
+        emit WholeNewWorld(newCarpet, carpetTimestamp, carpetIteration+1);
     }
 
 }

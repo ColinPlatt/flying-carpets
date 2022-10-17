@@ -12,7 +12,7 @@ pragma solidity ^0.8.0;
  * See the https://eips.ethereum.org/EIPS/eip-1014#motivation[EIP] for more
  * information.
  */
-library CREATE2_warp {
+library CREATE2_carpet {
 
     function deploy(
         address deployer,

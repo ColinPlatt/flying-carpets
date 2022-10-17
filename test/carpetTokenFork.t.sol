@@ -3,24 +3,24 @@ pragma solidity ^0.8.15;
 
 import "forge-std/Test.sol";
 import {click_to_start_mayhem} from "../src/click_to_start_mayhem.sol";
-import {warpToken} from "../src/warpToken.sol";
-import {warp0} from "../src/warp0.sol";
-import {warpHelper} from "../src/warpHelper.sol";
+import {carpetToken} from "../src/carpetToken.sol";
+import {carpet0} from "../src/carpet0.sol";
+import {carpetHelper} from "../src/carpetHelper.sol";
 
 import {IUniswapV2Router01} from 'v2-periphery/interfaces/IUniswapV2Router01.sol';
 
 
 // tests must be run on a fork of mainnet
-// forge test --match-path test/warpTokenFork.t.sol --fork-url $RPC_URL
-contract warpTokenForkTest is Test {
+// forge test --match-path test/carpetTokenFork.t.sol --fork-url $RPC_URL
+contract carpetTokenForkTest is Test {
     click_to_start_mayhem public mayhem;
-    warp0 public w0;
-    warpToken public warp;
-    warpHelper public helper;
+    carpet0 public c0;
+    carpetToken public carpet;
+    carpetHelper public helper;
     
-    bytes createCodeWarp = type(warpToken).creationCode;
-    bytes createCodeWarp0 = type(warp0).creationCode;
-    bytes createCodeHelper = type(warpHelper).creationCode;
+    bytes createCodeCarpet = type(carpetToken).creationCode;
+    bytes createCodeCarpet0 = type(carpet0).creationCode;
+    bytes createCodeHelper = type(carpetHelper).creationCode;
 
     address Admin = address(0xad1);
     address Alice = address(0xa11ce);
@@ -32,7 +32,7 @@ contract warpTokenForkTest is Test {
     uint256 mainnetFork;
 
     address helperAddr;
-    address w0Addr;
+    address c0Addr;
 
     receive() external payable {}
 
@@ -47,40 +47,40 @@ contract warpTokenForkTest is Test {
         bytes32[2] memory hashes;
 
         hashes[0] = keccak256(createCodeHelper);
-        hashes[1] = keccak256(createCodeWarp0);
+        hashes[1] = keccak256(createCodeCarpet0);
 
         mayhem = new click_to_start_mayhem(hashes);
 
         //Alice must be an EOA or the tokens will go to the contract
         vm.startPrank(Alice, Alice);
 
-        (helperAddr, w0Addr) = deployMayhem();
+        (helperAddr, c0Addr) = deployMayhem();
 
         vm.stopPrank();
 
         //check log to contract type
-        helper = warpHelper(payable(helperAddr));
-        w0 = warp0(payable(w0Addr));
+        helper = carpetHelper(payable(helperAddr));
+        c0 = carpet0(payable(c0Addr));
 
         vm.makePersistent(helperAddr);
-        vm.makePersistent(w0Addr);
+        vm.makePersistent(c0Addr);
 
     }
 
-    function deployMayhem() public returns (address _helperAddr, address _w0Addr) {
+    function deployMayhem() public returns (address _helperAddr, address _c0Addr) {
 
         bytes[2] memory depCodes;
         depCodes[0] = createCodeHelper;
-        depCodes[1] = createCodeWarp0;
+        depCodes[1] = createCodeCarpet0;
 
-        (_helperAddr, _w0Addr) = mayhem.click_to_start_the_mayhem(depCodes);
+        (_helperAddr, _c0Addr) = mayhem.click_to_start_the_mayhem(depCodes);
 
     }
 
     function claimAllForETH() public {
-        w0.claimForEth{value: 10 ether}();
-        assertEq(w0.balanceOf(address(this)), 50_000_000*1e18);
-        assertEq(w0.totalSupply(), 299_999_999_999_999_999_999_997+50_000_000*1e18);
+        c0.claimForEth{value: 10 ether}();
+        assertEq(c0.balanceOf(address(this)), 50_000_000*1e18);
+        assertEq(c0.totalSupply(), 299_999_999_999_999_999_999_997+50_000_000*1e18);
 
     }
 
@@ -97,7 +97,7 @@ contract warpTokenForkTest is Test {
         vm.startPrank(Apely);
 
         for(uint256 i = 0; i<6; i++) {
-            w0.claimForRugs(nftIds[i]);
+            c0.claimForRugs(nftIds[i]);
         }
         
         vm.stopPrank();
@@ -107,13 +107,13 @@ contract warpTokenForkTest is Test {
         
         makeApelyClaims();
 
-        assertEq(w0.balanceOf(Apely), 6*w0.WARPS_PER_RUGS());
-        assertEq(w0.totalSupply(), 299_999_999_999_999_999_999_997+6*w0.WARPS_PER_RUGS());
+        assertEq(c0.balanceOf(Apely), 6*c0.CARPETS_PER_RUGS());
+        assertEq(c0.totalSupply(), 299_999_999_999_999_999_999_997+6*c0.CARPETS_PER_RUGS());
     }
 
-    address w1;
-    address w1LPToken;
-    function testFirstWarp() public {
+    address c1;
+    address c1LPToken;
+    function testFirstCarpet() public {
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -126,24 +126,24 @@ contract warpTokenForkTest is Test {
 
         vm.startPrank(Alice, Alice);
 
-        uint256 AliceW0Bal = w0.balanceOf(Alice);
-        w1 = w0.warp();
+        uint256 AliceW0Bal = c0.balanceOf(Alice);
+        c1 = c0.whole_new_world();
 
-        warpToken(w1).claim();
+        carpetToken(c1).claim();
         
         vm.stopPrank();
 
-        assertEq(AliceW0Bal, warpToken(w1).balanceOf(Alice));
-        assertEq(0, w0.balanceOf(Alice));
+        assertEq(AliceW0Bal, carpetToken(c1).balanceOf(Alice));
+        assertEq(0, c0.balanceOf(Alice));
 
-        w1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w1);
-        vm.makePersistent(w1);
-        vm.makePersistent(w1LPToken);
+        c1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), c1);
+        vm.makePersistent(c1);
+        vm.makePersistent(c1LPToken);
     }
 
     function testTransfers() public {
 
-        testFirstWarp();
+        testFirstCarpet();
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -152,18 +152,18 @@ contract warpTokenForkTest is Test {
 
         vm.startPrank(Alice, Alice);
 
-            warpToken(w1).transfer(Apely, 1e18);
-            assertEq(warpToken(w1).balanceOf(Apely),1e18);
-            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-1e18);
+            carpetToken(c1).transfer(Apely, 1e18);
+            assertEq(carpetToken(c1).balanceOf(Apely),1e18);
+            assertEq(carpetToken(c1).balanceOf(Alice),299999999999999999999997-1e18);
 
-            warpToken(w1).approve(Apely, 2e18);
+            carpetToken(c1).approve(Apely, 2e18);
                 
         vm.stopPrank();
 
         vm.startPrank(Apely);
-            warpToken(w1).transferFrom(Alice, Apely, 2e18);
-            assertEq(warpToken(w1).balanceOf(Apely),3e18);
-            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-3e18);
+            carpetToken(c1).transferFrom(Alice, Apely, 2e18);
+            assertEq(carpetToken(c1).balanceOf(Apely),3e18);
+            assertEq(carpetToken(c1).balanceOf(Alice),299999999999999999999997-3e18);
 
         vm.stopPrank();
 
@@ -171,7 +171,7 @@ contract warpTokenForkTest is Test {
 
     function testFailTransferFrom() public {
 
-        testFirstWarp();
+        testFirstCarpet();
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -180,16 +180,16 @@ contract warpTokenForkTest is Test {
 
         vm.startPrank(Alice, Alice);
 
-            warpToken(w1).transfer(Apely, 1e18);
-            assertEq(warpToken(w1).balanceOf(Apely),1e18);
-            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-1e18);
+            carpetToken(c1).transfer(Apely, 1e18);
+            assertEq(carpetToken(c1).balanceOf(Apely),1e18);
+            assertEq(carpetToken(c1).balanceOf(Alice),299999999999999999999997-1e18);
 
-            warpToken(w1).approve(Apely, 2e18);
+            carpetToken(c1).approve(Apely, 2e18);
                 
         vm.stopPrank();
 
         vm.startPrank(Apely);
-            warpToken(w1).transferFrom(Alice, Apely, 3e18);
+            carpetToken(c1).transferFrom(Alice, Apely, 3e18);
 
         vm.stopPrank();
 
@@ -197,7 +197,7 @@ contract warpTokenForkTest is Test {
 
     function testFailTransferFromNoApprove() public {
 
-        testFirstWarp();
+        testFirstCarpet();
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -206,23 +206,23 @@ contract warpTokenForkTest is Test {
 
         vm.startPrank(Alice, Alice);
 
-            warpToken(w1).transfer(Apely, 1e18);
-            assertEq(warpToken(w1).balanceOf(Apely),1e18);
-            assertEq(warpToken(w1).balanceOf(Alice),299999999999999999999997-1e18);
+            carpetToken(c1).transfer(Apely, 1e18);
+            assertEq(carpetToken(c1).balanceOf(Apely),1e18);
+            assertEq(carpetToken(c1).balanceOf(Alice),299999999999999999999997-1e18);
                 
         vm.stopPrank();
 
         vm.startPrank(Apely);
-            warpToken(w1).transferFrom(Alice, Apely, 3e18);
+            carpetToken(c1).transferFrom(Alice, Apely, 3e18);
 
         vm.stopPrank();
 
     }
 
-    address w2;
+    address c2;
     
-    address w2LPToken;
-    function testSecondWarp() public {
+    address c2LPToken;
+    function testSecondCarpet() public {
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -235,20 +235,20 @@ contract warpTokenForkTest is Test {
 
         vm.startPrank(Alice, Alice);
 
-        uint256 AliceW0Bal = w0.balanceOf(Alice);
-        w1 = w0.warp();
-        warpToken(w1).claim();
-        assertEq(0, w0.balanceOf(Alice));
+        uint256 AliceW0Bal = c0.balanceOf(Alice);
+        c1 = c0.whole_new_world();
+        carpetToken(c1).claim();
+        assertEq(0, c0.balanceOf(Alice));
             
         vm.stopPrank();
 
-        assertEq(AliceW0Bal, warpToken(w1).balanceOf(Alice));
+        assertEq(AliceW0Bal, carpetToken(c1).balanceOf(Alice));
 
-        w1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w1);
-        vm.makePersistent(w1);
-        vm.makePersistent(w1LPToken);
+        c1LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), c1);
+        vm.makePersistent(c1);
+        vm.makePersistent(c1LPToken);
         vm.makePersistent(helperAddr);
-        vm.makePersistent(w0Addr);
+        vm.makePersistent(c0Addr);
         vm.makePersistent(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
         // move ahead 100 blocks
@@ -256,22 +256,22 @@ contract warpTokenForkTest is Test {
 
         vm.startPrank(Alice, Alice);
 
-        w2 = warpToken(w1).warp();
-        warpToken(w2).claim();
-        w2LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), w2);
-        vm.makePersistent(w2);
-        vm.makePersistent(w2LPToken);
+        c2 = carpetToken(c1).whole_new_world();
+        carpetToken(c2).claim();
+        c2LPToken = UniswapV2Library.pairFor(IUniswapV2Router01(address(helper.router())).factory(), IUniswapV2Router01(address(helper.router())).WETH(), c2);
+        vm.makePersistent(c2);
+        vm.makePersistent(c2LPToken);
 
         vm.stopPrank();
 
-        assertEq(AliceW0Bal, warpToken(w2).balanceOf(Alice));
-        assertEq(0, warpToken(w1).balanceOf(Alice));
+        assertEq(AliceW0Bal, carpetToken(c2).balanceOf(Alice));
+        assertEq(0, carpetToken(c1).balanceOf(Alice));
 
     }
 
     function testFailClaimExpired() public {
 
-        testSecondWarp();
+        testSecondCarpet();
 
         assertEq(vm.activeFork(), mainnetFork);
 
@@ -280,7 +280,7 @@ contract warpTokenForkTest is Test {
 
 
         vm.startPrank(Apely);
-            warpToken(w1).claim();
+            carpetToken(c1).claim();
 
         vm.stopPrank();
 

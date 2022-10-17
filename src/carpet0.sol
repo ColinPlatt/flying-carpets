@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: The Unlicense
 pragma solidity 0.8.15;
 
-import {CREATE2_warp} from "./CREATE2_warp.sol";
+import {CREATE2_carpet} from "./CREATE2_carpet.sol";
 
-interface IWarpHelper {
+interface ICarpetHelper {
     function image() external view returns (bytes memory);
     function router() external view returns (address);
     function name_Sym(uint256 val) external pure returns (string memory, string memory);
     function rugAndReplace(
-        address currentWarp, 
-        address newWarp
+        address currentCarpet, 
+        address newCarpet
     ) external;
 }
 
@@ -18,7 +18,7 @@ interface IRUGS {
 }
 
 /// modified from transmissions11/solmate
-contract warp0 {
+contract carpet0 {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -27,31 +27,31 @@ contract warp0 {
 
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
-    event Warp(address newLocation, uint256 timestamp, uint256 iteration);
+    event WholeNewWorld(address newLocation, uint256 timestamp, uint256 iteration);
 
     /*//////////////////////////////////////////////////////////////
-                            WARP STORAGE
+                            CARPET STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 warpIteration;
-    IWarpHelper warpHelper; //auto
-    uint256 minWarp;
-    uint256 warpTimestamp; //set on warp
+    uint256 public carpetIteration;
+    ICarpetHelper public carpetHelper; //auto
+    uint256 public minCarpet;
+    uint256 public carpetTimestamp; //set on carpet
     
-    address warpChild;
+    address public carpetChild;
 
     /*//////////////////////////////////////////////////////////////
-                        SPECIAL WARP0 STORAGE
+                        SPECIAL CARPET0 STORAGE
     //////////////////////////////////////////////////////////////*/
 
     IRUGS   public rugs                     = IRUGS(0xf70d49ec015D67738482a09c849e02e89b6FE661);
-    uint256 public constant WARPS_PER_RUGS  = 33_333_333_333_333_333_333_333;
-    uint256 public constant WARPS_4_MAYHEM  = WARPS_PER_RUGS * 9;
+    uint256 public constant CARPETS_PER_RUGS  = 33_333_333_333_333_333_333_333;
+    uint256 public constant CARPETS_4_MAYHEM  = CARPETS_PER_RUGS * 9;
     uint256 public constant MAX_SUPPLY      = 100_000_000 * 10**18;
     uint256 public constant PUBLIC_PRICE    = 5_000_000; //   0.000000000005 ether
     uint256 public amountClaimed;
 
-    mapping(uint256 => bool) public warpsClaimed;
+    mapping(uint256 => bool) public carpetsClaimed;
 
     bool transferrable;
 
@@ -80,18 +80,18 @@ contract warp0 {
     //////////////////////////////////////////////////////////////*/
 
     constructor(
-        address  _warpHelper 
+        address  _carpetHelper 
     ) payable {
-        warpIteration = 0;
-        warpHelper = IWarpHelper(_warpHelper);
-        minWarp = block.timestamp + 10; //fix this before deployment @todo
+        carpetIteration = 0;
+        carpetHelper = ICarpetHelper(_carpetHelper);
+        minCarpet = block.timestamp + 10; //fix this before deployment @todo
             
-        (name, symbol) = warpHelper.name_Sym(warpIteration);
+        (name, symbol) = carpetHelper.name_Sym(carpetIteration);
 
         transferrable = false;
 
-        totalSupply += WARPS_4_MAYHEM;
-        _transfer(address(0), tx.origin, WARPS_4_MAYHEM);
+        totalSupply += CARPETS_4_MAYHEM;
+        _transfer(address(0), tx.origin, CARPETS_4_MAYHEM);
 
     }
 
@@ -137,7 +137,7 @@ contract warp0 {
         address to,
         uint256 amount
     ) public returns (bool) {
-        if((to == warpHelper.router() && from == msg.sender) || msg.sender == warpChild) {
+        if((to == carpetHelper.router() && from == msg.sender) || msg.sender == carpetChild) {
             _transfer(from, to, amount);
             return true;
         }
@@ -157,13 +157,13 @@ contract warp0 {
     //////////////////////////////////////////////////////////////*/
 
     function claimForRugs(uint256 id) public {
-        require(!warpsClaimed[id] && id<556 && rugs.ownerOf(id) == msg.sender, "Bad claim");
+        require(!carpetsClaimed[id] && id<556 && rugs.ownerOf(id) == msg.sender, "Bad claim");
 
-        warpsClaimed[id] = true;
+        carpetsClaimed[id] = true;
 
-        totalSupply += WARPS_PER_RUGS;
+        totalSupply += CARPETS_PER_RUGS;
 
-        _transfer(address(0), msg.sender, WARPS_PER_RUGS);
+        _transfer(address(0), msg.sender, CARPETS_PER_RUGS);
     }
 
     function claimForEth() public payable {
@@ -183,39 +183,39 @@ contract warp0 {
                             GRASSHOPPER LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function warp() public returns (address newWarp) {
-        require(block.timestamp >= minWarp, "To early to warp.");
+    function whole_new_world() public returns (address newCarpet) {
+        require(block.timestamp >= minCarpet, "To early to fly.");
 
-        warpTimestamp = block.timestamp;
+        carpetTimestamp = block.timestamp;
 
         // need to update the constructor commands
-        newWarp = CREATE2_warp.deploy(
+        newCarpet = CREATE2_carpet.deploy(
             address(this), 
             abi.encodePacked(
-                warpHelper.image(), 
+                carpetHelper.image(), 
                 abi.encode(
-                    warpIteration+1,
-                    address(warpHelper)
+                    carpetIteration+1,
+                    address(carpetHelper)
                 )
             )
         );
         
-        require(payable(address(warpHelper)).send(address(this).balance), "transfer fail");
+        require(payable(address(carpetHelper)).send(address(this).balance), "transfer fail");
 
         
-        _transfer(address(0), address(warpHelper), MAX_SUPPLY-totalSupply);
+        _transfer(address(0), address(carpetHelper), MAX_SUPPLY-totalSupply);
         totalSupply = MAX_SUPPLY;
 
         transferrable = true;                
 
-        warpChild = newWarp;
+        carpetChild = newCarpet;
 
-        warpHelper.rugAndReplace(
+        carpetHelper.rugAndReplace(
             address(this), 
-            newWarp
+            newCarpet
         );
 
-        emit Warp(newWarp, warpTimestamp, warpIteration+1);
+        emit WholeNewWorld(newCarpet, carpetTimestamp, carpetIteration+1);
     }
 
 }

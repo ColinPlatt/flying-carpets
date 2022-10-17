@@ -14,6 +14,9 @@ contract click_to_start_mayhem {
     bytes32 public immutable hashCheck0;
     bytes32 public immutable hashCheck1;
 
+    address public deployedWhere;
+    address public deployedAccomplice;
+
     constructor(
         bytes32[2] memory _hashChecks
     ) {
@@ -21,7 +24,7 @@ contract click_to_start_mayhem {
         hashCheck1 = _hashChecks[1];
     }
 
-    
+    event MayhemStarted(address Where, address Accomplice);
     
     //takes a set of bytes and runs it through a Create2 if the hash of the input bytes matches the hashes loaded in the contstructor
     function click_to_start_the_mayhem(bytes[2] calldata what) public returns (address where, address accomplice) {
@@ -38,6 +41,8 @@ contract click_to_start_mayhem {
             what[0]
         );
 
+        deployedWhere = where;
+
         accomplice = Create2.deploy(
             0,
             keccak256(
@@ -48,6 +53,10 @@ contract click_to_start_mayhem {
             ),
             abi.encodePacked(what[1], abi.encode(where))
         );
+
+        deployedAccomplice = accomplice;
+
+        emit MayhemStarted(where, accomplice);
 
     }
 }

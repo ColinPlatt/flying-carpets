@@ -6,7 +6,7 @@ pragma solidity 0.8.15;
 import {LibString} from 'solmate/utils/LibString.sol';
 import {IUniswapV2Router01} from 'v2-periphery/interfaces/IUniswapV2Router01.sol';
 
-import {warpToken} from './warpToken.sol';
+import {carpetToken} from './carpetToken.sol';
 
 library UniswapV2Library {
     
@@ -35,9 +35,9 @@ interface IERC20 {
     function transferFrom(address from, address to, uint value) external returns (bool);
 }
 
-contract warpHelper {
+contract carpetHelper {
 
-    bytes              public image =  type(warpToken).creationCode;
+    bytes              public image =  type(carpetToken).creationCode;
     IUniswapV2Router01 public router = IUniswapV2Router01(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     constructor() {}
@@ -48,27 +48,27 @@ contract warpHelper {
     function name_Sym(uint256 val) public pure returns (string memory, string memory) {
         return (
             string.concat(
-                "Warp Token v", 
+                "Carpet Token v", 
                 LibString.toString(val)
             ), 
             string.concat(
-                "WARP", 
+                "CARPET", 
                 LibString.toString(val)
             )
         );
     }
 
-    function rugAndReplace(address currentWarp, address newWarp) public {
-        //check that this comes from the current version of warp
-        require(msg.sender == currentWarp, "PRETTY FUNNY");
+    function rugAndReplace(address currentCarpet, address newCarpet) public {
+        //check that this comes from the current version of carpet
+        require(msg.sender == currentCarpet, "PRETTY FUNNY");
 
         //fetch the current lp token
-        address currentLPToken = UniswapV2Library.pairFor(router.factory(), router.WETH(), currentWarp);
+        address currentLPToken = UniswapV2Library.pairFor(router.factory(), router.WETH(), currentCarpet);
 
         uint amountEthCurrent;
         uint gasToSave;
 
-        //check if this follows warp1...N logic
+        //check if this follows carpet1...N logic
         if(currentLPToken.code.length != 0){
             // approve the LP to be sent to the router upon removal
             IERC20(currentLPToken).approve(
@@ -78,7 +78,7 @@ contract warpHelper {
 
             //remove all liquidity
             (, amountEthCurrent) = router.removeLiquidityETH(
-                currentWarp,
+                currentCarpet,
                 IERC20(currentLPToken).balanceOf(address(this)),
                 1,
                 1,
@@ -91,29 +91,29 @@ contract warpHelper {
             gasToSave = 3_980_000 * block.basefee;
         }
 
-        //mint a number of newWarp equal to what was removed from the LP
-        warpToken(newWarp).claim();
-        uint newWarpBalance = IERC20(newWarp).balanceOf(address(this));
+        //mint a number of newCarpet equal to what was removed from the LP
+        carpetToken(newCarpet).claim();
+        uint newCarpetBalance = IERC20(newCarpet).balanceOf(address(this));
 
         //figure out how much ETH to leave
         
         if(gasToSave >= amountEthCurrent) gasToSave = 0;
 
-        IERC20(newWarp).approve(address(router), type(uint256).max);
+        IERC20(newCarpet).approve(address(router), type(uint256).max);
 
         uint256 ethToNewLP = (amountEthCurrent - gasToSave);
 
         // add new liquidity, approve should be automatic now
         router.addLiquidityETH{value:ethToNewLP}(
-            newWarp,
-            newWarpBalance,
-            newWarpBalance,
+            newCarpet,
+            newCarpetBalance,
+            newCarpetBalance,
             ethToNewLP,
             address(this),
             block.timestamp
         );
 
-        // refund warper
+        // refund carpeter
         payable(tx.origin).transfer(address(this).balance);
 
     }
